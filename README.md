@@ -1,3 +1,7 @@
+# Prerequisites
+!!! Works only with Java 8 !!!
+Please make sure you have JDK 8 installed.
+
 # Description:
 This tool used for migrating ThingsBoard into hybrid mode from Postgres.
    
@@ -16,14 +20,14 @@ Switch to `tools` module in Command Line and execute
 It will generate single jar file with all required dependencies inside `target dir` -> `tools-2.4.1-SNAPSHOT-jar-with-dependencies.jar`.
 
 
-# Prepare requred files and run Tool:
+# Prepare required files and run Tool:
 
 #### Dump data from the source Postgres Database
 *Do not use compression if possible because Tool can only work with uncompressed file
 
 1. Dump related tables that need to correct save telemetry
 
-   `pg_dump -h localhost -U postgres -d thingsboard -T admin_settings -T attribute_kv -T audit_log -T component_discriptor -T device_credentials -T event -T oauth2_client_registration -T oauth2_client_registration_info -T oauth2_client_registration_template -T relation -T rule_node_state -T tb_schema_settings -T user_credentials -T ts_kv* -t ts_kv_dictionary > related_entities.dmp`
+   `pg_dump -h localhost -U postgres -d thingsboard -T admin_settings -T attribute_kv -T audit_log -T component_discriptor -T device_credentials -T event -T oauth2_client_registration -T oauth2_client_registration_info -T oauth2_client_registration_template -T relation -T rule_node_state -T tb_schema_settings -T user_credentials -T ts_kv* > related_entities.dmp`
 
 2. Dump `ts_kv` and child:
    
@@ -68,7 +72,7 @@ Tool execution time depends on DB size, CPU resources and Disk throughput
 * Note that this part works only for single node Cassandra Cluster. If you have more nodes - it is better to use `sstableloader` tool.
 
 1. [Optional] install Cassandra on the instance
-2. [Optional] Using `cqlsh` create `thingsboard` keyspace and requred tables from this files `schema-ts.cql` and `schema-ts-latest.cql` using `source` command
+2. [Optional] Using `cqlsh` create `thingsboard` keyspace and required tables from this files `schema-ts.cql` and `schema-ts-latest.cql` using `source` command
 3. Stop Cassandra
 4. Look at `/var/lib/cassandra/data/thingsboard` and check for names of data folders
 5. Copy generated SSTable files into cassandra data dir using next command:
