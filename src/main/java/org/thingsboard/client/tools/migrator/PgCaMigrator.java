@@ -95,8 +95,12 @@ public class PgCaMigrator {
 
         } finally {
             iterator.close();
-            tbTsWriter.closeWriters();
-            tbLatestWriter.closeWriters();
+            if (this.tbTsWriter != null) {
+                tbTsWriter.closeWriters();
+            }
+            if (this.tbLatestWriter != null) {
+                tbLatestWriter.closeWriters();
+            }
         }
     }
 
