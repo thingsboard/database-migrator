@@ -12,8 +12,9 @@ import java.util.List;
 
 public class TbLatestWriter extends AbstractTbWriter {
 
-    public TbLatestWriter(DictionaryParser keyParser, RelatedEntitiesParser entityIdsAndTypes, File outDir, boolean castStringsIfPossible) {
-        super(keyParser, entityIdsAndTypes, outDir, castStringsIfPossible);
+    public TbLatestWriter(DictionaryParser keyParser, RelatedEntitiesParser entityIdsAndTypes, File outDir,
+                          boolean castStringsIfPossible, String partitioning) {
+        super(keyParser, entityIdsAndTypes, outDir, castStringsIfPossible, partitioning);
     }
 
     @Override

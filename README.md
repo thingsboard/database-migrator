@@ -62,7 +62,8 @@ java -jar ./tools-3.2.2-SNAPSHOT-jar-with-dependencies.jar
         -latestOut /home/user/migration/ts_latest 
         -tsOut /home/user/migration/ts 
         -partitionsOut /home/user/migration/ts_partition 
-        -castEnable false 
+        -castEnable false
+        -partitioning MONTHS
 ```  
 *Use your paths for program arguments*
 

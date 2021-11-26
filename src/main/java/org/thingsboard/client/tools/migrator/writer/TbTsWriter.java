@@ -17,8 +17,9 @@ public class TbTsWriter extends AbstractTbWriter {
 
     private final CQLSSTableWriter currentPartitionsWriter;
 
-    public TbTsWriter(DictionaryParser keyParser, RelatedEntitiesParser entityIdsAndTypes, File outDir, File outTsPartitionDir, boolean castStringsIfPossible) {
-        super(keyParser, entityIdsAndTypes, outDir, castStringsIfPossible);
+    public TbTsWriter(DictionaryParser keyParser, RelatedEntitiesParser entityIdsAndTypes, File outDir,
+                      File outTsPartitionDir, boolean castStringsIfPossible, String partitioning) {
+        super(keyParser, entityIdsAndTypes, outDir, castStringsIfPossible, partitioning);
         this.currentPartitionsWriter = WriterBuilder.getPartitionWriter(outTsPartitionDir);
     }
 

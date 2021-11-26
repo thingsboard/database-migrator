@@ -53,13 +53,14 @@ public class PgCaMigrator {
                         File outTsLatestDir,
                         RelatedEntitiesParser allEntityIdsAndTypes,
                         DictionaryParser dictionaryParser,
-                        boolean castStringsIfPossible) {
+                        boolean castStringsIfPossible,
+                        String partitioning) {
         this.sourceFile = sourceFile;
         if (outTsLatestDir != null) {
-            this.tbLatestWriter = new TbLatestWriter(dictionaryParser, allEntityIdsAndTypes, outTsLatestDir, castStringsIfPossible);
+            this.tbLatestWriter = new TbLatestWriter(dictionaryParser, allEntityIdsAndTypes, outTsLatestDir, castStringsIfPossible, partitioning);
         }
         if (ourTsDir != null) {
-            this.tbTsWriter = new TbTsWriter(dictionaryParser, allEntityIdsAndTypes, ourTsDir, outTsPartitionDir, castStringsIfPossible);
+            this.tbTsWriter = new TbTsWriter(dictionaryParser, allEntityIdsAndTypes, ourTsDir, outTsPartitionDir, castStringsIfPossible, partitioning);
         }
     }
 

@@ -6,6 +6,7 @@ import org.apache.cassandra.io.sstable.CQLSSTableWriter;
 import org.apache.commons.io.LineIterator;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.thingsboard.client.tools.migrator.DictionaryParser;
+import org.thingsboard.client.tools.migrator.NoSqlTsPartitionDate;
 import org.thingsboard.client.tools.migrator.RelatedEntitiesParser;
 import org.thingsboard.client.tools.migrator.WriterUtils;
 import org.thingsboard.client.tools.migrator.exception.EntityMissingException;
@@ -20,6 +21,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -29,6 +31,8 @@ public abstract class AbstractTbWriter implements TbWriter {
 
     private static final long LOG_BATCH = 1000000;
     private static final long ROW_PER_FILE = 1000000;
+
+    private NoSqlTsPartitionDate tsFormat;
 
     private long castErrors = 0;
     private long castedOk = 0;
@@ -48,12 +52,21 @@ public abstract class AbstractTbWriter implements TbWriter {
 
     private final boolean castStringIfPossible;
 
-    public AbstractTbWriter(DictionaryParser keyParser, RelatedEntitiesParser entityIdsAndTypes, File outDir, boolean castStringIfPossible) {
+    public AbstractTbWriter(DictionaryParser keyParser, RelatedEntitiesParser entityIdsAndTypes, File outDir,
+                            boolean castStringIfPossible, String partitioning) {
         this.keyParser = keyParser;
         this.entityIdsAndTypes = entityIdsAndTypes;
         this.currentWriter = getWriter(outDir);
         this.outDir = outDir;
         this.castStringIfPossible = castStringIfPossible;
+
+        Optional<NoSqlTsPartitionDate> partition = NoSqlTsPartitionDate.parse(partitioning);
+        if (partition.isPresent()) {
+            tsFormat = partition.get();
+        } else {
+            log.warn("Incorrect configuration of partitioning {}", partitioning);
+            throw new RuntimeException("Failed to parse partitioning property: " + partitioning + "!");
+        }
     }
 
     public abstract List<Object> toValues(List<String> raw);
@@ -205,7 +218,7 @@ public abstract class AbstractTbWriter implements TbWriter {
 
     private long toPartitionTs(long ts) {
         LocalDateTime time = LocalDateTime.ofInstant(Instant.ofEpochMilli(ts), ZoneOffset.UTC);
-        return time.truncatedTo(ChronoUnit.DAYS).withDayOfMonth(1).toInstant(ZoneOffset.UTC).toEpochMilli();
+        return tsFormat.truncatedTo(time).toInstant(ZoneOffset.UTC).toEpochMilli();
     }
 
 }

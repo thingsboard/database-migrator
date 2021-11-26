@@ -65,8 +65,20 @@ public class MigratorTool {
                 tsSaveDir = new File(cmd.getOptionValue("telemetryOut"));
                 partitionsSaveDir = new File(cmd.getOptionValue("partitionsOut"));
             }
+            String partitioning = NoSqlTsPartitionDate.MONTHS.name();
+            if (cmd.getOptionValue("partitioningOpt") != null) {
+                partitioning = cmd.getOptionValue("partitioningOpt");
+            }
 
-            new PgCaMigrator(allTelemetrySource, tsSaveDir, partitionsSaveDir, latestSaveDir, allEntityIdsAndTypes, dictionaryParser, castEnable).migrate();
+            new PgCaMigrator(
+                    allTelemetrySource,
+                    tsSaveDir,
+                    partitionsSaveDir,
+                    latestSaveDir,
+                    allEntityIdsAndTypes,
+                    dictionaryParser,
+                    castEnable,
+                    partitioning).migrate();
 
         } catch (Throwable th) {
             log.error("Failed to migrate", th);
@@ -104,6 +116,11 @@ public class MigratorTool {
         Option dictionaryOpt = new Option("dictionary", "dictionary", true, "dictionary source file path");
         dictionaryOpt.setRequired(true);
         options.addOption(dictionaryOpt);
+
+        Option partitioningOpt = new Option("partitioning", "partitioning", true,
+                "Specify partitioning size for timestamp key-value storage. Example: MINUTES, HOURS, DAYS, MONTHS, INDEFINITE");
+        partitioningOpt.setRequired(false);
+        options.addOption(partitioningOpt);
 
         HelpFormatter formatter = new HelpFormatter();
         CommandLineParser parser = new BasicParser();
