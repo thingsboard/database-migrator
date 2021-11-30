@@ -11,6 +11,7 @@ But in general here are few benchmarks:
 2. If postgres table has size 100GB then dump file will be about 30GB 
 3. Generation SSTables from dump -> 100GB = 3 hours
 4. 100GB Dump file will be converted into SSTable with size about 18GB
+5. Recommended instance type in AWS is m5.xlarge or bigger
 
 # Tool build Instruction:
 Switch to `tools` module in Command Line and execute 
@@ -64,6 +65,7 @@ java -jar ./tools-3.2.2-SNAPSHOT-jar-with-dependencies.jar
         -partitionsOut /home/user/migration/ts_partition 
         -castEnable false
         -partitioning MONTHS
+        -linesToSkip 0
 ```  
 *Use your paths for program arguments*
 

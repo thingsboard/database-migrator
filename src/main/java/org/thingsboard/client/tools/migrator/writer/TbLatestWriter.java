@@ -43,7 +43,7 @@ public class TbLatestWriter extends AbstractTbWriter {
 
     @Override
     public void writePartitions() {
-        // nothins todo
+        // nothing todo
     }
 
 }

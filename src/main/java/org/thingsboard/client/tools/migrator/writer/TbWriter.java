@@ -6,7 +6,7 @@ import java.io.IOException;
 
 public interface TbWriter {
 
-    void processBlock(LineIterator iterator);
+    int processBlock(LineIterator iterator, int linesToSkip);
 
     void writePartitions() throws IOException;
 

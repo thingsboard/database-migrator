@@ -64,7 +64,7 @@ public class PgCaMigrator {
         }
     }
 
-    public void migrate() throws IOException {
+    public void migrate(Integer linesToSkip) throws IOException {
         String line;
         LineIterator iterator = FileUtils.lineIterator(this.sourceFile);
 
@@ -74,7 +74,7 @@ public class PgCaMigrator {
                 if (this.tbLatestWriter != null && isBlockLatestStarted(line)) {
                     log.info("START TO MIGRATE LATEST");
                     long start = System.currentTimeMillis();
-                    tbLatestWriter.processBlock(iterator);
+                    linesToSkip = tbLatestWriter.processBlock(iterator, linesToSkip);
                     log.info("TOTAL LINES MIGRATED: {}, FORMING OF SSL FOR LATEST TS FINISHED WITH TIME: {} ms, skipped lines {}",
                             tbLatestWriter.getLinesMigrated(), (System.currentTimeMillis() - start), tbLatestWriter.getSkippedLines());
                 }
@@ -82,14 +82,10 @@ public class PgCaMigrator {
                 if (this.tbTsWriter != null && isBlockTsStarted(line)) {
                     log.info("START TO MIGRATE TS");
                     long start = System.currentTimeMillis();
-                    tbTsWriter.processBlock(iterator);
+                    linesToSkip = tbTsWriter.processBlock(iterator, linesToSkip);
                     log.info("TOTAL LINES MIGRATED: {}, FORMING OF SSL FOR TS FINISHED WITH TIME: {} ms, skipped lines {}",
                             tbTsWriter.getLinesMigrated(), (System.currentTimeMillis() - start), tbTsWriter.getSkippedLines());
                 }
-            }
-
-            if (this.tbTsWriter != null) {
-                tbTsWriter.writePartitions();
             }
 
             log.info("Finished migrate Telemetry");

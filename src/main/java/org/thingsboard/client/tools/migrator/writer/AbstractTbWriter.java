@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 public abstract class AbstractTbWriter implements TbWriter {
 
     private static final long LOG_BATCH = 1000000;
-    private static final long ROW_PER_FILE = 1000000;
+    private static final long ROW_PER_FILE = 10000000;
 
     private NoSqlTsPartitionDate tsFormat;
 
@@ -93,7 +93,7 @@ public abstract class AbstractTbWriter implements TbWriter {
     }
 
     @Override
-    public void processBlock(LineIterator iterator) {
+    public int processBlock(LineIterator iterator, int linesToSkip) {
         String currentLine;
         long linesProcessed = 0;
         while (iterator.hasNext()) {
@@ -101,7 +101,12 @@ public abstract class AbstractTbWriter implements TbWriter {
             currentLine = iterator.nextLine();
 
             if (WriterUtils.isBlockFinished(currentLine)) {
-                return;
+                return linesToSkip;
+            }
+
+            if (linesToSkip > 0) {
+                linesToSkip = linesToSkip - 1;
+                continue;
             }
 
             List<Object> values = null;
@@ -117,9 +122,10 @@ public abstract class AbstractTbWriter implements TbWriter {
 
                 if (values != null) {
                     if (this.currentWriterCount == 0) {
-                        System.out.println(new Date() + " close writer " + new Date());
                         reOpenWriter();
+                        log.info("Reopening writer");
 
+                        writePartitions();
                     }
 
                     if (this.castStringIfPossible) {
@@ -143,6 +149,7 @@ public abstract class AbstractTbWriter implements TbWriter {
                 log.error("Failed to process line [" + currentLine + "], skipping it , values = " + strValues + "", ex);
             }
         }
+        return linesToSkip;
     }
 
     private void logLinesProcessed(long lines) {

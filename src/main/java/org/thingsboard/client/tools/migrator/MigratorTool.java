@@ -66,8 +66,13 @@ public class MigratorTool {
                 partitionsSaveDir = new File(cmd.getOptionValue("partitionsOut"));
             }
             String partitioning = NoSqlTsPartitionDate.MONTHS.name();
-            if (cmd.getOptionValue("partitioningOpt") != null) {
-                partitioning = cmd.getOptionValue("partitioningOpt");
+            if (cmd.getOptionValue("partitioning") != null) {
+                partitioning = cmd.getOptionValue("partitioning");
+            }
+
+            int linesToSkip = 0;
+            if (cmd.getOptionValue("linesToSkip") != null) {
+                linesToSkip = Integer.parseInt(cmd.getOptionValue("linesToSkip"));
             }
 
             new PgCaMigrator(
@@ -78,7 +83,7 @@ public class MigratorTool {
                     allEntityIdsAndTypes,
                     dictionaryParser,
                     castEnable,
-                    partitioning).migrate();
+                    partitioning).migrate(linesToSkip);
 
         } catch (Throwable th) {
             log.error("Failed to migrate", th);
@@ -121,6 +126,11 @@ public class MigratorTool {
                 "Specify partitioning size for timestamp key-value storage. Example: MINUTES, HOURS, DAYS, MONTHS, INDEFINITE");
         partitioningOpt.setRequired(false);
         options.addOption(partitioningOpt);
+
+        Option linesToSkipOpt = new Option("linesToSkip", "linesToSkip", true,
+                "Specify number of lines to skip from dump file");
+        linesToSkipOpt.setRequired(false);
+        options.addOption(linesToSkipOpt);
 
         HelpFormatter formatter = new HelpFormatter();
         CommandLineParser parser = new BasicParser();
