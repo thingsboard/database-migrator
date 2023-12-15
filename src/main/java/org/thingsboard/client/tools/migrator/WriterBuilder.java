@@ -48,11 +48,7 @@ public class WriterBuilder {
             "    dbl_v double,\n" +
             "    json_v text,\n" +
             "    PRIMARY KEY (( entity_type, entity_id, key, partition ), ts)\n" +
-            ") WITH CLUSTERING ORDER BY (ts DESC)\n" +
-            "        AND compaction = {'class': 'TimeWindowCompactionStrategy',\n" +
-            "                                 'compaction_window_size': '1',\n" +
-            "                                 'compaction_window_unit': 'DAYS'}\n" +
-            "      AND gc_grace_seconds = 864000;";
+            ");";
 
     private static final String latestSchema = "CREATE TABLE IF NOT EXISTS thingsboard.ts_kv_latest_cf (\n" +
             "    entity_type text, // (DEVICE, CUSTOMER, TENANT)\n" +
