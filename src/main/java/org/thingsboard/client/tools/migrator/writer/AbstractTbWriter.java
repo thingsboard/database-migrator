@@ -101,6 +101,12 @@ public abstract class AbstractTbWriter implements TbWriter {
             currentLine = iterator.nextLine();
 
             if (WriterUtils.isBlockFinished(currentLine)) {
+
+                try {
+                    writePartitions();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
                 return linesToSkip;
             }
 
@@ -148,6 +154,11 @@ public abstract class AbstractTbWriter implements TbWriter {
                 }
                 log.error("Failed to process line [" + currentLine + "], skipping it , values = " + strValues + "", ex);
             }
+        }
+        try {
+            writePartitions();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
         return linesToSkip;
     }
