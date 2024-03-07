@@ -63,18 +63,46 @@ Using `cqlsh` create `thingsboard` keyspace and required tables.
 
 * Stop ThingsBoard instance
 * Dump related tables (entities) that used to validate telemetry:
-
-`pg_dump -h localhost -U postgres -d thingsboard --exclude-table=admin_settings --exclude-table=attribute_kv --exclude-table=audit_log --exclude-table=component_discriptor --exclude-table=device_credentials --exclude-table=event --exclude-table=oauth2_client_registration --exclude-table=oauth2_client_registration_info --exclude-table=oauth2_client_registration_template --exclude-table=relation --exclude-table=rule_node_state --exclude-table=tb_schema_settings --exclude-table=user_credentials --exclude-table=ts_kv* > /home/user/dump/related_entities.dmp`
-
+  ```bash
+  pg_dump -h localhost -U postgres -d thingsboard --exclude-table=admin_settings \
+  --exclude-table=attribute_kv --exclude-table=audit_log --exclude-table=component_discriptor \
+  --exclude-table=device_credentials --exclude-table=event --exclude-table=oauth2_client_registration \
+  --exclude-table=oauth2_client_registration_info --exclude-table=oauth2_client_registration_template \
+  --exclude-table=relation --exclude-table=rule_node_state --exclude-table=tb_schema_settings \
+  --exclude-table=user_credentials --exclude-table=ts_kv* --exclude-table=_timescaledb_internal.* > /home/user/dump/related_entities.dmp`
+  ```
 * Dump `ts_kv_dictionary`:
-   
-`pg_dump -h localhost -U postgres -d thingsboard --table=ts_kv_dictionary > /home/user/dump/ts_kv_dictionary.dmp`
+  ```bash
+  pg_dump -h localhost -U postgres -d thingsboard --table=ts_kv_dictionary > /home/user/dump/ts_kv_dictionary.dmp
+  ```
    
 * Dump `ts_kv` and all partitions:
+  ```bash
+  pg_dump -h localhost -U postgres -d thingsboard --load-via-partition-root --data-only \
+  --table=ts_kv* --table=_timescaledb_internal.* > /home/user/dump/ts_kv_all.dmp  
+  ```
+  - If only part of the data needs to be migrated, it will be necessary to create a custom table in Postgres:
+    ```
+    create table ts_kv_custom as (
+      select ts_kv.* 
+      from ts_kv 
+      join ts_kv_dictionary on ts_kv.key=ts_kv_dictionary.key_id
+      join device on device.id=ts_kv.entity_id
+      join device_profile on device_profile.id=device.device_profile_id
+      where ts_kv_dictionary.key in ('pulseCounter', 'temperature', 'flow')
+        and device_profile.name in ('default')
+    );
+    ```
+    Such tables can be created several times using different queries. The table name must start with `ts_kv_custom`. Like `ts_kv_custom1`, `ts_kv_custom_tenant_x`
+    
+    To create a dump, use the command:
+    ```bash
+    pg_dump -h localhost -U postgres -d thingsboard --load-via-partition-root --data-only \
+    --table=ts_kv_custom* > /home/user/dump/ts_kv_all.dmp  
+    ```
 
-`pg_dump -h localhost -U postgres -d thingsboard --load-via-partition-root --data-only --table=ts_kv* > /home/user/dump/ts_kv_all.dmp`   
 
-* [Optional] Move table dumps to the instance where cassandra will be hosted
+> [Optional] Move table dumps to the instance where cassandra will be hosted
 
 ### Prepare directory structure for SSTables
 Tool use 3 different directories for saving SSTables - `ts_kv_cf`, `ts_kv_latest_cf`, `ts_kv_partitions_cf`.
@@ -92,29 +120,29 @@ Create 3 empty directories. For example:
 **IMPORTANT! If you run this tool on the remote instance - don't forget to execute this command in `screen` to avoid unexpected termination**
 
 ```
-java -jar ./target/database-migrator-1.0-SNAPSHOT-jar-with-dependencies.jar 
-        -telemetryFrom /home/user/dump/ts_kv_all.dmp 
-        -relatedEntities /home/user/dump/related_entities.dmp 
-        -dictionary /home/user/dump/ts_kv_dictionary.dmp
-        -latestOut /home/user/migration/ts_latest 
-        -tsOut /home/user/migration/ts 
-        -partitionsOut /home/user/migration/ts_partition 
-        -castEnable false
-        -partitioning MONTHS
+java -jar ./target/database-migrator-1.0-SNAPSHOT-jar-with-dependencies.jar \
+        -telemetryFrom /home/user/dump/ts_kv_all.dmp \
+        -relatedEntities /home/user/dump/related_entities.dmp \
+        -dictionary /home/user/dump/ts_kv_dictionary.dmp \
+        -latestOut /home/user/migration/ts_latest \
+        -tsOut /home/user/migration/ts \
+        -partitionsOut /home/user/migration/ts_partition \ 
+        -castEnable false \
+        -partitioning MONTHS \
         -linesToSkip 0 > /tmp/migration.log &
 ```
 
 *If you want to migrate just `ts_kv` without `ts_kv_latest`, execute next:*
 
 ```
-java -jar ./target/database-migrator-1.0-SNAPSHOT-jar-with-dependencies.jar 
-        -telemetryFrom /home/user/dump/ts_kv_all.dmp 
-        -relatedEntities /home/user/dump/related_entities.dmp 
-        -dictionary /home/user/dump/ts_kv_dictionary.dmp
-        -tsOut /home/user/migration/ts 
-        -partitionsOut /home/user/migration/ts_partition 
-        -castEnable false
-        -partitioning MONTHS
+java -jar ./target/database-migrator-1.0-SNAPSHOT-jar-with-dependencies.jar \
+        -telemetryFrom /home/user/dump/ts_kv_all.dmp \
+        -relatedEntities /home/user/dump/related_entities.dmp \
+        -dictionary /home/user/dump/ts_kv_dictionary.dmp \
+        -tsOut /home/user/migration/ts \
+        -partitionsOut /home/user/migration/ts_partition \ 
+        -castEnable false \
+        -partitioning MONTHS \
         -linesToSkip 0 > /tmp/migration.log &
 ```
   
@@ -189,18 +217,46 @@ Re-start ThingsBoard and verify that new timeseries data written into Cassandra.
 **Do not use compression if possible because tool can only work with uncompressed files**
 
 * Dump related tables (entities) that used to validate telemetry:
-
-`pg_dump -h localhost -U postgres -d thingsboard --exclude-table=admin_settings --exclude-table=attribute_kv --exclude-table=audit_log --exclude-table=component_discriptor --exclude-table=device_credentials --exclude-table=event --exclude-table=oauth2_client_registration --exclude-table=oauth2_client_registration_info --exclude-table=oauth2_client_registration_template --exclude-table=relation --exclude-table=rule_node_state --exclude-table=tb_schema_settings --exclude-table=user_credentials --exclude-table=ts_kv* > /home/user/dump/related_entities.dmp`
-
+  ```bash
+  pg_dump -h localhost -U postgres -d thingsboard --exclude-table=admin_settings \
+  --exclude-table=attribute_kv --exclude-table=audit_log --exclude-table=component_discriptor \
+  --exclude-table=device_credentials --exclude-table=event --exclude-table=oauth2_client_registration \
+  --exclude-table=oauth2_client_registration_info --exclude-table=oauth2_client_registration_template \
+  --exclude-table=relation --exclude-table=rule_node_state --exclude-table=tb_schema_settings \
+  --exclude-table=user_credentials --exclude-table=ts_kv* --exclude-table=_timescaledb_internal.* > /home/user/dump/related_entities.dmp`
+  ```
 * Dump `ts_kv_dictionary`:
-   
-`pg_dump -h localhost -U postgres -d thingsboard --table=ts_kv_dictionary > /home/user/dump/ts_kv_dictionary.dmp`
-   
+  ```bash
+  pg_dump -h localhost -U postgres -d thingsboard --table=ts_kv_dictionary > /home/user/dump/ts_kv_dictionary.dmp
+  ```
+
 * Dump `ts_kv` and all partitions:
+  ```bash
+  pg_dump -h localhost -U postgres -d thingsboard --load-via-partition-root --data-only \
+  --table=ts_kv* --table=_timescaledb_internal.* > /home/user/dump/ts_kv_all.dmp  
+  ```
+  - If only part of the data needs to be migrated, it will be necessary to create a custom table in Postgres:
+    ```
+    create table ts_kv_custom as (
+      select ts_kv.* 
+      from ts_kv 
+      join ts_kv_dictionary on ts_kv.key=ts_kv_dictionary.key_id
+      join device on device.id=ts_kv.entity_id
+      join device_profile on device_profile.id=device.device_profile_id
+      where ts_kv_dictionary.key in ('pulseCounter', 'temperature', 'flow')
+        and device_profile.name in ('default')
+    );
+    ```
+    Such tables can be created several times using different queries. The table name must start with `ts_kv_custom`. Like `ts_kv_custom1`, `ts_kv_custom_tenant_x`
 
-`pg_dump -h localhost -U postgres -d thingsboard --load-via-partition-root --data-only --table=ts_kv* > /home/user/dump/ts_kv_all.dmp`   
+    To create a dump, use the command:
+    ```bash
+    pg_dump -h localhost -U postgres -d thingsboard --load-via-partition-root --data-only \
+    --table=ts_kv_custom* > /home/user/dump/ts_kv_all.dmp  
+    ```
 
-* [Optional] Move table dumps to the instance where cassandra will be hosted
+
+> [Optional] Move table dumps to the instance where cassandra will be hosted
 
 ### Prepare directory structure for SSTables
 Tool use 3 different directories for saving SSTables - `ts_kv_cf`, `ts_kv_latest_cf`, `ts_kv_partitions_cf`
@@ -222,29 +278,29 @@ For example:
 **IMPORTANT! If you run this tool on the remote instance - don't forget to execute this command in `screen` to avoid unexpected termination**
 
 ```
-java -jar ./target/database-migrator-1.0-SNAPSHOT-jar-with-dependencies.jar 
-        -telemetryFrom /home/user/dump/ts_kv_all.dmp 
-        -relatedEntities /home/user/dump/related_entities.dmp 
-        -dictionary /home/user/dump/ts_kv_dictionary.dmp
-        -latestOut /home/user/migration/thingsboard/ts_kv_latest_cf
-        -tsOut /home/user/migration/thingsboard/ts_kv_cf
-        -partitionsOut /home/user/migration/thingsboard/ts_kv_partitions_cf
-        -castEnable false
-        -partitioning MONTHS
+java -jar ./target/database-migrator-1.0-SNAPSHOT-jar-with-dependencies.jar \
+        -telemetryFrom /home/user/dump/ts_kv_all.dmp \
+        -relatedEntities /home/user/dump/related_entities.dmp \ 
+        -dictionary /home/user/dump/ts_kv_dictionary.dmp \
+        -latestOut /home/user/migration/thingsboard/ts_kv_latest_cf \
+        -tsOut /home/user/migration/thingsboard/ts_kv_cf \
+        -partitionsOut /home/user/migration/thingsboard/ts_kv_partitions_cf \
+        -castEnable false \
+        -partitioning MONTHS \
         -linesToSkip 0 > /tmp/migration.log &
 ```
 
 *If you want to migrate just `ts_kv` without `ts_kv_latest`, execute next:*
 
 ```
-java -jar ./target/database-migrator-1.0-SNAPSHOT-jar-with-dependencies.jar 
-        -telemetryFrom /home/user/dump/ts_kv_all.dmp 
-        -relatedEntities /home/user/dump/related_entities.dmp 
-        -dictionary /home/user/dump/ts_kv_dictionary.dmp
-        -tsOut /home/user/migration/thingsboard/ts_kv_cf
-        -partitionsOut /home/user/migration/thingsboard/ts_kv_partitions_cf
-        -castEnable false
-        -partitioning MONTHS
+java -jar ./target/database-migrator-1.0-SNAPSHOT-jar-with-dependencies.jar \
+        -telemetryFrom /home/user/dump/ts_kv_all.dmp \
+        -relatedEntities /home/user/dump/related_entities.dmp \ 
+        -dictionary /home/user/dump/ts_kv_dictionary.dmp \
+        -tsOut /home/user/migration/thingsboard/ts_kv_cf \
+        -partitionsOut /home/user/migration/thingsboard/ts_kv_partitions_cf \
+        -castEnable false \
+        -partitioning MONTHS \
         -linesToSkip 0 > /tmp/migration.log &
 ```
   
@@ -296,15 +352,15 @@ To use this feature please do next steps:
 * Start tool according to instructions above, but with an additional parameter **linesToSkip**:
 
 ```
-java -jar ./target/database-migrator-1.0-SNAPSHOT-jar-with-dependencies.jar 
-        -telemetryFrom /home/user/dump/ts_kv_all.dmp 
-        -relatedEntities /home/user/dump/related_entities.dmp 
-        -dictionary /home/user/dump/ts_kv_dictionary.dmp
-        -latestOut /home/user/migration/thingsboard/ts_kv_latest_cf
-        -tsOut /home/user/migration/thingsboard/ts_kv_cf
-        -partitionsOut /home/user/migration/thingsboard/ts_kv_partitions_cf
-        -castEnable false
-        -partitioning MONTHS
+java -jar ./target/database-migrator-1.0-SNAPSHOT-jar-with-dependencies.jar \
+        -telemetryFrom /home/user/dump/ts_kv_all.dmp \
+        -relatedEntities /home/user/dump/related_entities.dmp \ 
+        -dictionary /home/user/dump/ts_kv_dictionary.dmp \
+        -latestOut /home/user/migration/thingsboard/ts_kv_latest_cf \
+        -tsOut /home/user/migration/thingsboard/ts_kv_cf \
+        -partitionsOut /home/user/migration/thingsboard/ts_kv_partitions_cf \
+        -castEnable false \
+        -partitioning MONTHS \
         -linesToSkip XXXXXX > /tmp/migration.log &
 ```
 
