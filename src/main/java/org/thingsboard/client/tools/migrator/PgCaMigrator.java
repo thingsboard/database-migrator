@@ -102,7 +102,7 @@ public class PgCaMigrator {
     }
 
     private boolean isBlockTsStarted(String line) {
-        return line.startsWith("COPY public.ts_kv (");
+        return line.startsWith("COPY public.ts_kv (") || line.startsWith("COPY _timescaledb_internal._hyper") || line.startsWith("COPY public.ts_kv_custom");
     }
 
     private boolean isBlockLatestStarted(String line) {
