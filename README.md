@@ -73,7 +73,7 @@ Using `cqlsh` create `thingsboard` keyspace and required tables.
   ```
 * Dump `ts_kv_dictionary`:
   ```bash
-  pg_dump -h localhost -U postgres -d thingsboard --table=ts_kv_dictionary > /home/user/dump/ts_kv_dictionary.dmp
+  pg_dump -h localhost -U postgres -d thingsboard --table=ts_kv_dictionary --table=key_dictionary > /home/user/dump/ts_kv_dictionary.dmp
   ```
    
 * Dump `ts_kv` and all partitions:
@@ -227,7 +227,7 @@ Re-start ThingsBoard and verify that new timeseries data written into Cassandra.
   ```
 * Dump `ts_kv_dictionary`:
   ```bash
-  pg_dump -h localhost -U postgres -d thingsboard --table=ts_kv_dictionary > /home/user/dump/ts_kv_dictionary.dmp
+  pg_dump -h localhost -U postgres -d thingsboard --table=ts_kv_dictionary --table=key_dictionary > /home/user/dump/ts_kv_dictionary.dmp
   ```
 
 * Dump `ts_kv` and all partitions:
