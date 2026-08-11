@@ -1,14 +1,24 @@
 # Prerequisites
 
-**IMPORTANT! Requires Java 8 SDK**
+**Requires Java 11+ SDK (Java 17 recommended)**
 
-Please make sure you have JDK 8 installed:
+The tool needs Java 11 at minimum. JDK 17 is recommended, matching Cassandra
+5.0's own officially supported runtime. JDK 21 has been verified to work for this tool's
+offline SSTable-writing usage, but is not yet an officially supported JDK for Cassandra 5.0
+itself, so treat it as best-effort. JDK 8 is no longer supported.
+
+The bundled `cassandra-all` library needs reflective access to a few JDK-internal packages
+on JDK 9+; this is granted automatically via `Add-Opens`/`Add-Exports` entries in the jar
+manifest, so no extra JVM flags are needed when running with `java -jar`.
+
 
 ```
-ubuntu@pc:~$ java -version
-openjdk version "1.8.0_292"
-OpenJDK Runtime Environment (build 1.8.0_292-8u292-b10-0ubuntu1~20.04-b10)
-OpenJDK 64-Bit Server VM (build 25.292-b10, mixed mode)
+# Installing OpenJDK 17
+sudo apt update && sudo apt install -y openjdk-17-jdk-headless
+# Set Java 17 as the default version
+sudo update-alternatives --config java
+# Verify the installation
+java -version
 ```
 
 # Description
@@ -153,6 +163,8 @@ Tool execution time depends on DB size, CPU resources and disk throughput.
 ### Loading SSTables into Cassandra
 
 **Note that this part works only for single node Cassandra cluster**
+
+**This tool now generates SSTables in Cassandra 5's native big-format (`oa`) — the target Cassandra installation must be version 5.0.x.**
 
 * Stop Cassandra
 * Look at `/var/lib/cassandra/data/thingsboard` and check for names of data folders
@@ -310,7 +322,9 @@ Tool execution time depends on DB size, CPU resources and disk throughput.
 
 ### Loading SSTables into Cassandra
 
-Using [sstableloader](https://docs.datastax.com/en/cassandra-oss/3.x/cassandra/tools/toolsBulkloader.html) start loading data into Cassandra:
+**This tool now generates SSTables in Cassandra 5's native big-format (`oa`) — use the `sstableloader` that ships with your Cassandra 5.0.x installation (an older 3.x/4.x `sstableloader` binary will not understand the target cluster's streaming protocol).**
+
+Using [sstableloader](https://cassandra.apache.org/doc/5.0/cassandra/managing/tools/sstableloader.html) start loading data into Cassandra:
 
 ```
 sstableloader --verbose --nodes CASSANDRA_NODES --username cassandra --password CASSANDRA_PASSWORD /home/user/migration/thingsboard/ts_kv_partitions_cf/
