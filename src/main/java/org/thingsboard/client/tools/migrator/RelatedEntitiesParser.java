@@ -63,6 +63,7 @@ public class RelatedEntitiesParser {
         tableNameAndEntityType.put("COPY public.widget_type ", EntityType.WIDGET_TYPE);
         tableNameAndEntityType.put("COPY public.tenant_profile ", EntityType.TENANT_PROFILE);
         tableNameAndEntityType.put("COPY public.device_profile ", EntityType.DEVICE_PROFILE);
+        tableNameAndEntityType.put("COPY public.asset_profile ", EntityType.ASSET_PROFILE);
         tableNameAndEntityType.put("COPY public.api_usage_state ", EntityType.API_USAGE_STATE);
 
         // PE
