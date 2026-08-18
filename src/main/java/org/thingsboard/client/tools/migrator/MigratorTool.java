@@ -30,6 +30,9 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class MigratorTool {
 
+    private static final long MAX_TTL_DAYS = 7300; // Cassandra's hard-coded max TTL is 20 years
+    private static final long MAX_TTL_SECONDS = TimeUnit.DAYS.toSeconds(MAX_TTL_DAYS);
+
     public static void main(String[] args) {
         CommandLine cmd = parseArgs(args);
 
@@ -64,7 +67,14 @@ public class MigratorTool {
             Long ttlSeconds = null;
             if (cmd.getOptionValue("ttl") != null) {
                 long ttlDays = Long.parseLong(cmd.getOptionValue("ttl"));
+                if (ttlDays <= 0) {
+                    throw new RuntimeException("Failed to parse ttl property: ttl must be a positive number of days!");
+                }
                 ttlSeconds = TimeUnit.DAYS.toSeconds(ttlDays);
+                if (ttlSeconds > MAX_TTL_SECONDS) {
+                    throw new RuntimeException("Failed to parse ttl property: ttl of " + ttlDays +
+                            " days exceeds Cassandra's maximum allowed TTL of " + MAX_TTL_DAYS + " days (20 years)!");
+                }
             }
 
             new PgCaMigrator(
@@ -127,6 +137,7 @@ public class MigratorTool {
 
         Option ttlOpt = new Option("ttl", "ttl", true,
                 "TTL in days for migrated timeseries data (ts_kv_cf and ts_kv_partitions_cf). " +
+                        "Must be a positive number not exceeding 7300 days (Cassandra's 20 year TTL limit). " +
                         "If not set, migrated data will never expire. Does not affect ts_kv_latest_cf.");
         ttlOpt.setRequired(false);
         options.addOption(ttlOpt);
