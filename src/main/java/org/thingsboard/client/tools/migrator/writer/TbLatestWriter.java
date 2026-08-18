@@ -29,7 +29,8 @@ public class TbLatestWriter extends AbstractTbWriter {
 
     public TbLatestWriter(DictionaryParser keyParser, RelatedEntitiesParser entityIdsAndTypes, File outDir,
                           boolean castStringsIfPossible, String partitioning) {
-        super(keyParser, entityIdsAndTypes, outDir, castStringsIfPossible, partitioning);
+        // latest values never expire regardless of the migration's ttl setting
+        super(keyParser, entityIdsAndTypes, outDir, castStringsIfPossible, partitioning, null);
     }
 
     @Override

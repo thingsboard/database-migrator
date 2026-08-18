@@ -34,8 +34,8 @@ public class TbTsWriter extends AbstractTbWriter {
     private final File outTsPartitionDir;
 
     public TbTsWriter(DictionaryParser keyParser, RelatedEntitiesParser entityIdsAndTypes, File outDir,
-                      File outTsPartitionDir, boolean castStringsIfPossible, String partitioning) {
-        super(keyParser, entityIdsAndTypes, outDir, castStringsIfPossible, partitioning);
+                      File outTsPartitionDir, boolean castStringsIfPossible, String partitioning, Long ttlSeconds) {
+        super(keyParser, entityIdsAndTypes, outDir, castStringsIfPossible, partitioning, ttlSeconds);
         this.outTsPartitionDir = outTsPartitionDir;
     }
 
@@ -61,19 +61,19 @@ public class TbTsWriter extends AbstractTbWriter {
     @Override
     public void reOpenWriter() throws IOException {
         currentWriter.close();
-        currentWriter = WriterBuilder.getTsWriter(outDir);
+        currentWriter = WriterBuilder.getTsWriter(outDir, ttlSeconds);
     }
 
     @Override
     public CQLSSTableWriter getWriter(File outDir) {
-        return WriterBuilder.getTsWriter(outDir);
+        return WriterBuilder.getTsWriter(outDir, ttlSeconds);
     }
 
     @Override
     public void writePartitions() throws IOException {
         CQLSSTableWriter currentPartitionsWriter = null;
         try {
-            currentPartitionsWriter = WriterBuilder.getPartitionWriter(outTsPartitionDir);
+            currentPartitionsWriter = WriterBuilder.getPartitionWriter(outTsPartitionDir, ttlSeconds);
             log.info("Partitions collected " + partitions.size());
             long startTs = System.currentTimeMillis();
             for (String partition : partitions) {

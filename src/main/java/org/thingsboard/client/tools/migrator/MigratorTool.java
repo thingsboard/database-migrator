@@ -25,6 +25,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
 import java.io.File;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 public class MigratorTool {
@@ -60,6 +61,12 @@ public class MigratorTool {
                 linesToSkip = Integer.parseInt(cmd.getOptionValue("linesToSkip"));
             }
 
+            Long ttlSeconds = null;
+            if (cmd.getOptionValue("ttl") != null) {
+                long ttlDays = Long.parseLong(cmd.getOptionValue("ttl"));
+                ttlSeconds = TimeUnit.DAYS.toSeconds(ttlDays);
+            }
+
             new PgCaMigrator(
                     allTelemetrySource,
                     tsSaveDir,
@@ -68,7 +75,8 @@ public class MigratorTool {
                     allEntityIdsAndTypes,
                     dictionaryParser,
                     castEnable,
-                    partitioning).migrate(linesToSkip);
+                    partitioning,
+                    ttlSeconds).migrate(linesToSkip);
 
         } catch (Throwable th) {
             log.error("Failed to migrate", th);
@@ -116,6 +124,12 @@ public class MigratorTool {
                 "Specify number of lines to skip from dump file");
         linesToSkipOpt.setRequired(false);
         options.addOption(linesToSkipOpt);
+
+        Option ttlOpt = new Option("ttl", "ttl", true,
+                "TTL in days for migrated timeseries data (ts_kv_cf and ts_kv_partitions_cf). " +
+                        "If not set, migrated data will never expire. Does not affect ts_kv_latest_cf.");
+        ttlOpt.setRequired(false);
+        options.addOption(ttlOpt);
 
         HelpFormatter formatter = new HelpFormatter();
         CommandLineParser parser = new BasicParser();

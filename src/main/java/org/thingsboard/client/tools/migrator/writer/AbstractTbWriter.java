@@ -67,10 +67,14 @@ public abstract class AbstractTbWriter implements TbWriter {
 
     private final boolean castStringIfPossible;
 
+    // null means no TTL - migrated rows never expire, matching pre-existing behavior
+    protected final Long ttlSeconds;
+
     public AbstractTbWriter(DictionaryParser keyParser, RelatedEntitiesParser entityIdsAndTypes, File outDir,
-                            boolean castStringIfPossible, String partitioning) {
+                            boolean castStringIfPossible, String partitioning, Long ttlSeconds) {
         this.keyParser = keyParser;
         this.entityIdsAndTypes = entityIdsAndTypes;
+        this.ttlSeconds = ttlSeconds;
         this.currentWriter = getWriter(outDir);
         this.outDir = outDir;
         this.castStringIfPossible = castStringIfPossible;

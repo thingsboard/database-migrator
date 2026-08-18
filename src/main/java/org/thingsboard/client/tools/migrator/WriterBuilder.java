@@ -57,15 +57,17 @@ public class WriterBuilder {
             ") WITH CLUSTERING ORDER BY ( partition ASC )\n" +
             "  AND compaction = { 'class' :  'LeveledCompactionStrategy'  };";
 
-    public static CQLSSTableWriter getTsWriter(File dir) {
+    public static CQLSSTableWriter getTsWriter(File dir, Long ttlSeconds) {
         return CQLSSTableWriter.builder()
                 .inDirectory(dir.getAbsolutePath())
                 .forTable(tsSchema)
                 .using("INSERT INTO thingsboard.ts_kv_cf (entity_type, entity_id, key, partition, ts, bool_v, str_v, long_v, dbl_v, json_v) " +
-                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)" + ttlClause(ttlSeconds))
                 .build();
     }
 
+    // Latest values intentionally never expire, regardless of ttlSeconds - they represent
+    // the current state of a key, not historical points, matching ThingsBoard's own TTL semantics.
     public static CQLSSTableWriter getLatestWriter(File dir) {
         return CQLSSTableWriter.builder()
                 .inDirectory(dir.getAbsolutePath())
@@ -75,12 +77,16 @@ public class WriterBuilder {
                 .build();
     }
 
-    public static CQLSSTableWriter getPartitionWriter(File dir) {
+    public static CQLSSTableWriter getPartitionWriter(File dir, Long ttlSeconds) {
         return CQLSSTableWriter.builder()
                 .inDirectory(dir.getAbsolutePath())
                 .forTable(partitionSchema)
                 .using("INSERT INTO thingsboard.ts_kv_partitions_cf (entity_type, entity_id, key, partition) " +
-                        "VALUES (?, ?, ?, ?)")
+                        "VALUES (?, ?, ?, ?)" + ttlClause(ttlSeconds))
                 .build();
+    }
+
+    private static String ttlClause(Long ttlSeconds) {
+        return ttlSeconds != null ? " USING TTL " + ttlSeconds : "";
     }
 }
