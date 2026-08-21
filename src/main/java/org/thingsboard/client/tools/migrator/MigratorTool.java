@@ -25,9 +25,13 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
 import java.io.File;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 public class MigratorTool {
+
+    private static final long MAX_TTL_DAYS = 7300; // Cassandra's hard-coded max TTL is 20 years
+    private static final long MAX_TTL_SECONDS = TimeUnit.DAYS.toSeconds(MAX_TTL_DAYS);
 
     public static void main(String[] args) {
         CommandLine cmd = parseArgs(args);
@@ -60,6 +64,19 @@ public class MigratorTool {
                 linesToSkip = Integer.parseInt(cmd.getOptionValue("linesToSkip"));
             }
 
+            Long ttlSeconds = null;
+            if (cmd.getOptionValue("ttl") != null) {
+                long ttlDays = Long.parseLong(cmd.getOptionValue("ttl"));
+                if (ttlDays <= 0) {
+                    throw new RuntimeException("Failed to parse ttl property: ttl must be a positive number of days!");
+                }
+                ttlSeconds = TimeUnit.DAYS.toSeconds(ttlDays);
+                if (ttlSeconds > MAX_TTL_SECONDS) {
+                    throw new RuntimeException("Failed to parse ttl property: ttl of " + ttlDays +
+                            " days exceeds Cassandra's maximum allowed TTL of " + MAX_TTL_DAYS + " days (20 years)!");
+                }
+            }
+
             new PgCaMigrator(
                     allTelemetrySource,
                     tsSaveDir,
@@ -68,7 +85,9 @@ public class MigratorTool {
                     allEntityIdsAndTypes,
                     dictionaryParser,
                     castEnable,
-                    partitioning).migrate(linesToSkip);
+                    partitioning,
+                    ttlSeconds,
+                    System.currentTimeMillis()).migrate(linesToSkip);
 
         } catch (Throwable th) {
             log.error("Failed to migrate", th);
@@ -116,6 +135,15 @@ public class MigratorTool {
                 "Specify number of lines to skip from dump file");
         linesToSkipOpt.setRequired(false);
         options.addOption(linesToSkipOpt);
+
+        Option ttlOpt = new Option("ttl", "ttl", true,
+                "Retention period in days for migrated timeseries data, counted from each row's own timestamp " +
+                        "(not from migration time). ts_kv_cf rows older than this period are skipped rather than " +
+                        "migrated; ts_kv_partitions_cf entries get the full period as a flat TTL. " +
+                        "Must be a positive number not exceeding 7300 days (Cassandra's 20 year TTL limit). " +
+                        "If not set, migrated data will never expire. Does not affect ts_kv_latest_cf.");
+        ttlOpt.setRequired(false);
+        options.addOption(ttlOpt);
 
         HelpFormatter formatter = new HelpFormatter();
         CommandLineParser parser = new BasicParser();

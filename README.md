@@ -336,6 +336,31 @@ sstableloader --verbose --nodes CASSANDRA_NODES --username cassandra --password 
 
 Verify that historical data available in ThingsBoard.
 
+# Setting TTL for migrated data
+
+By default migrated data never expires. To make migrated timeseries data expire automatically in Cassandra,
+pass the optional `-ttl` argument (in days) when running the tool:
+
+```
+java -jar ./target/database-migrator-1.0-SNAPSHOT-jar-with-dependencies.jar \
+        ... \
+        -ttl 90
+```
+
+Notes:
+* TTL applies only to `ts_kv_cf` and `ts_kv_partitions_cf` (historical data points and their partition bookkeeping).
+* `ts_kv_latest_cf` (last known value per key) is never affected by `-ttl` — this matches ThingsBoard's own TTL
+  behavior, where only historical points expire, not the latest value.
+* For `ts_kv_cf`, TTL is calculated per row from that row's own original timestamp, not from the moment the
+  SSTables are generated: `remaining_ttl = ttl - (migration_time - row_ts)`. A row whose age already exceeds
+  the configured `-ttl` is skipped entirely rather than migrated — the migrated data ends up with the same
+  absolute expiration date it would have had if it had been written with this TTL policy from the start.
+* `ts_kv_partitions_cf` entries get the full configured `-ttl` as a flat TTL counted from migration time. This
+  is intentional and safe: since it's always later than any individual row's remaining TTL, the partition
+  bookkeeping entry can never expire before the data it references.
+* `-ttl` must be a positive number of days and cannot exceed 7300 days (20 years), which is Cassandra's
+  hard-coded maximum TTL.
+
 # Troubleshooting
 
 ## Continue migration in case of failure on particular migration line
