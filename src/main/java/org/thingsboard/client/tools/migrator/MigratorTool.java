@@ -86,7 +86,8 @@ public class MigratorTool {
                     dictionaryParser,
                     castEnable,
                     partitioning,
-                    ttlSeconds).migrate(linesToSkip);
+                    ttlSeconds,
+                    System.currentTimeMillis()).migrate(linesToSkip);
 
         } catch (Throwable th) {
             log.error("Failed to migrate", th);
@@ -136,7 +137,9 @@ public class MigratorTool {
         options.addOption(linesToSkipOpt);
 
         Option ttlOpt = new Option("ttl", "ttl", true,
-                "TTL in days for migrated timeseries data (ts_kv_cf and ts_kv_partitions_cf). " +
+                "Retention period in days for migrated timeseries data, counted from each row's own timestamp " +
+                        "(not from migration time). ts_kv_cf rows older than this period are skipped rather than " +
+                        "migrated; ts_kv_partitions_cf entries get the full period as a flat TTL. " +
                         "Must be a positive number not exceeding 7300 days (Cassandra's 20 year TTL limit). " +
                         "If not set, migrated data will never expire. Does not affect ts_kv_latest_cf.");
         ttlOpt.setRequired(false);

@@ -33,10 +33,16 @@ public class TbTsWriter extends AbstractTbWriter {
 
     private final File outTsPartitionDir;
 
+    // Single reference point for all per-row ttl calculations, captured once when the migration
+    // starts so that every row's remaining ttl is computed against the same clock reading.
+    private final long migrationStartMillis;
+
     public TbTsWriter(DictionaryParser keyParser, RelatedEntitiesParser entityIdsAndTypes, File outDir,
-                      File outTsPartitionDir, boolean castStringsIfPossible, String partitioning, Long ttlSeconds) {
+                      File outTsPartitionDir, boolean castStringsIfPossible, String partitioning, Long ttlSeconds,
+                      long migrationStartMillis) {
         super(keyParser, entityIdsAndTypes, outDir, castStringsIfPossible, partitioning, ttlSeconds);
         this.outTsPartitionDir = outTsPartitionDir;
+        this.migrationStartMillis = migrationStartMillis;
     }
 
     @Override
@@ -46,12 +52,29 @@ public class TbTsWriter extends AbstractTbWriter {
 
     @Override
     public List<Object> toValues(List<String> raw) {
+        // Cassandra's TTL column type is a 32-bit int, not bigint - CQLSSTableWriter requires the bound
+        // value's Java type to match exactly, so this must stay an Integer (a Long here throws a
+        // ClassCastException at addRow(...) time).
+        Integer rowTtlSeconds = null;
+        if (ttlSeconds != null) {
+            long rowTs = Long.parseLong(raw.get(2));
+            long elapsedSeconds = Math.max(0, (migrationStartMillis - rowTs) / 1000);
+            long remainingTtlSeconds = ttlSeconds - elapsedSeconds;
+            if (remainingTtlSeconds <= 0) {
+                return null;
+            }
+            rowTtlSeconds = (int) remainingTtlSeconds;
+        }
+
         List<Object> result = new ArrayList<>();
 
         addTypeIdKey(result, raw);
         addPartitions(result, raw);
         addValues(result, raw);
         processPartitions(result);
+        if (rowTtlSeconds != null) {
+            result.add(rowTtlSeconds);
+        }
 
         logLinesMigrated(linesMigrated++);
 
@@ -61,12 +84,12 @@ public class TbTsWriter extends AbstractTbWriter {
     @Override
     public void reOpenWriter() throws IOException {
         currentWriter.close();
-        currentWriter = WriterBuilder.getTsWriter(outDir, ttlSeconds);
+        currentWriter = WriterBuilder.getTsWriter(outDir, ttlSeconds != null);
     }
 
     @Override
     public CQLSSTableWriter getWriter(File outDir) {
-        return WriterBuilder.getTsWriter(outDir, ttlSeconds);
+        return WriterBuilder.getTsWriter(outDir, ttlSeconds != null);
     }
 
     @Override

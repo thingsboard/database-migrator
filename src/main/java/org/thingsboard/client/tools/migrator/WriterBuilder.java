@@ -57,12 +57,15 @@ public class WriterBuilder {
             ") WITH CLUSTERING ORDER BY ( partition ASC )\n" +
             "  AND compaction = { 'class' :  'LeveledCompactionStrategy'  };";
 
-    public static CQLSSTableWriter getTsWriter(File dir, Long ttlSeconds) {
+    // When ttlEnabled, each row carries its own remaining TTL (computed from its original timestamp),
+    // so the TTL is a bind parameter here rather than a literal - the caller must append the computed
+    // per-row ttl (in seconds) as the last value passed to addRow(...).
+    public static CQLSSTableWriter getTsWriter(File dir, boolean ttlEnabled) {
         return CQLSSTableWriter.builder()
                 .inDirectory(dir.getAbsolutePath())
                 .forTable(tsSchema)
                 .using("INSERT INTO thingsboard.ts_kv_cf (entity_type, entity_id, key, partition, ts, bool_v, str_v, long_v, dbl_v, json_v) " +
-                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)" + ttlClause(ttlSeconds))
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)" + (ttlEnabled ? " USING TTL ?" : ""))
                 .build();
     }
 
